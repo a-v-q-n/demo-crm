@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import { Bouton, Carte, Champ, Etiquette } from '@/components/ui/primitives';
 import { signIn } from '@/lib/auth-client';
 
 // Carte de connexion : la démo est publique, ses identifiants sont diffusés — le rappel en
 // pied de carte est volontaire, pas un oubli.
 export function Formulaire() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [enCours, setEnCours] = useState(false);
@@ -22,13 +20,18 @@ export function Formulaire() {
       const { error } = await signIn.email({ email, password: motDePasse });
       if (error) {
         setErreur(error.message ?? 'Identifiants incorrects.');
+        setEnCours(false);
         return;
       }
-      router.push('/dashboard');
-      router.refresh();
+      // Le bouton reste désactivé jusqu'au rechargement : la page va disparaître.
+      // Navigation DURE, volontairement : une navigation douce (`router.push`) peut rejouer
+      // l'entrée que le cache de routeur de Next a gardée pour `/dashboard` du temps où la
+      // session n'existait pas — entrée qui redirige vers `/login`. `/login` voit alors la
+      // session et renvoie vers `/dashboard`, qui rejoue le cache : la boucle. Recharger la
+      // page repart d'un cache vide et ferme définitivement la porte.
+      window.location.assign('/dashboard');
     } catch {
       setErreur('Connexion impossible. Réessaie.');
-    } finally {
       setEnCours(false);
     }
   }

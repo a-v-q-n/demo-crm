@@ -2,7 +2,7 @@
 
 import { Columns3, LayoutDashboard, LogOut, Users } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
 import { signOut } from '@/lib/auth-client';
 
@@ -16,7 +16,6 @@ const LIENS = [
 
 export function Nav({ email }: { email: string }) {
   const chemin = usePathname();
-  const router = useRouter();
 
   return (
     <nav className="flex h-full w-12 shrink-0 flex-col border-r border-bord bg-surface/60 px-2 py-4 md:w-[168px] md:px-2.5">
@@ -59,8 +58,10 @@ export function Nav({ email }: { email: string }) {
           title="Se déconnecter"
           onClick={async () => {
             await signOut();
-            router.push('/login');
-            router.refresh();
+            // Navigation dure, comme à la connexion : le cache de routeur garde pour `/login`
+            // une entrée qui redirige vers `/dashboard`, valable du temps où la session
+            // existait. La rejouer renverrait dans l'application qu'on vient de quitter.
+            window.location.assign('/login');
           }}
           className="transition-douce flex items-center gap-2 rounded-md px-1.5 py-1.5 text-[11px] text-atone hover:text-rose"
         >
