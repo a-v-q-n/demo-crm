@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Direction artistique — terminal de trading, pas tableur.
+   Fond très sombre, texte blanc cassé, néon en accent seulement : vert pour le
+   signé et le positif, rose pour l'en cours et les actions. Le glow ne se pose
+   que sur ce qui est actif.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-fond: #07080b;
+  --color-surface: #0d0f15;
+  --color-surface-2: #14171f;
+  --color-surface-3: #1b1f29;
+  --color-bord: #1e222c;
+  --color-bord-vif: #2c313e;
+
+  --color-texte: #eceae6;
+  --color-atone: #7b8394;
+  --color-atone-fort: #a2aab8;
+
+  --color-vert: #2ff09b;
+  --color-vert-sourd: #1b8f5d;
+  --color-rose: #ff3d8a;
+  --color-rose-sourd: #a3245a;
+  --color-ambre: #ffb340;
+  --color-ardoise: #5b6376;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-fond);
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+  /* L'écran cible est un carré de 1080×1080 : la page elle-même ne défile jamais.
+     Ce sont les zones internes (listes, colonnes du pipeline) qui défilent. */
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fond : maillage discret de terminal, jamais assez fort pour concurrencer le texte. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 61, 138, 0.07), transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(47, 240, 155, 0.06), transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    44px 44px,
+    44px 44px;
+}
+
+@layer utilities {
+  /* Le glow — réservé aux éléments actifs. */
+  .glow-vert {
+    box-shadow:
+      0 0 0 1px rgba(47, 240, 155, 0.45),
+      0 0 18px -4px rgba(47, 240, 155, 0.45);
+  }
+  .glow-rose {
+    box-shadow:
+      0 0 0 1px rgba(255, 61, 138, 0.45),
+      0 0 18px -4px rgba(255, 61, 138, 0.5);
+  }
+  .glow-texte-vert {
+    text-shadow: 0 0 14px rgba(47, 240, 155, 0.55);
+  }
+  .glow-texte-rose {
+    text-shadow: 0 0 14px rgba(255, 61, 138, 0.55);
+  }
+
+  /* Chiffres alignés : indispensable pour des montants qui se comparent à l'œil. */
+  .chiffres {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .transition-douce {
+    transition:
+      background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms ease;
+  }
+
+  /* Barre de défilement discrète : les zones internes défilent, ça ne doit pas se voir. */
+  .filet-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-bord-vif) transparent;
+  }
+  .filet-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .filet-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-bord-vif);
+    border-radius: 999px;
+  }
+  .filet-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Les champs de saisie parlent la même langue que le reste. */
+input,
+textarea,
+select {
+  background: var(--color-surface-2);
+  color: var(--color-texte);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-atone);
+}
+
+*:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(255, 61, 138, 0.6),
+    0 0 16px -4px rgba(255, 61, 138, 0.5);
+}

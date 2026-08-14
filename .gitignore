@@ -1,4 +1,8 @@
 node_modules
+.next
+next-env.d.ts
+*.tsbuildinfo
+.playwright-mcp
 .env
 .env.*
 *.log

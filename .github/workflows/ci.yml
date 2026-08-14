@@ -1,0 +1,113 @@
+name: ci
+# CI/CD autonome du repo. Il possède tout son cycle de vie : gate (test) + build de l'image GHCR
+# immuable (sha-<commit>) + deploy de la CIBLE DU PUSH via le reusable workflow partagé de `ci`.
+# Coolify ne build jamais : on repointe la cible sur le sha déjà construit+testé.
+#
+# Deux déclencheurs :
+#   - workflow_dispatch (sur une branche) : GATE avant merge. Ne déploie rien.
+#   - push `main` : DEPLOY de la cible (prod en mono-palier, preview en double-palier) de l'image
+#     déjà construite (idempotent : rebuild seulement si l'image manque sur GHCR).
+#
+# Le secret COOLIFY_TOKEN est hérité du secret d'ORGANISATION (visibilité ALL) — rien à poser par repo.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', '.claude/**']
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      exists: ${{ steps.exists.outputs.exists }}
+    steps:
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA:0:12}" >> "$GITHUB_OUTPUT"
+      - id: exists
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          if docker manifest inspect "ghcr.io/$OWNER/demo-crm:$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"; echo "image $TAG déjà publiée → build+test sautés"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"; echo "image $TAG absente → build+test"
+          fi
+
+  test:
+    needs: prep
+    if: needs.prep.outputs.exists != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Gate (npm run build)
+        run: npm run build
+
+  build:
+    needs: prep
+    if: needs.prep.outputs.exists != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/demo-crm:${{ needs.prep.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  gate:
+    needs: [prep, build, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verdict
+        run: |
+          if [ "${{ needs.build.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "failure" ]; then
+            echo "✗ gate rouge (build=${{ needs.build.result }}, test=${{ needs.test.result }})" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "✓ gate ok (build=${{ needs.build.result }}, test=${{ needs.test.result }}) — image \`${{ needs.prep.outputs.tag }}\` validée" >> "$GITHUB_STEP_SUMMARY"
+
+  # Deploy la CIBLE DU PUSH via le reusable workflow partagé de `ci`. En mono-palier, uuid = la
+  # PROD (déploiement direct assumé) ; en double-palier, uuid = la PREVIEW (la prod se promeut à part
+  # via promote.yml). mode = service | application, passé explicitement.
+  deploy:
+    needs: [prep, gate]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.gate.result == 'success'
+    uses: a-v-q-n/ci/.github/workflows/deploy.yml@main
+    with:
+      uuid: bsw4ksocs8wwow08cwg8wwsc
+      health_url: https://demo-crm.avqn.ch/healthz
+      image_tag: ${{ needs.prep.outputs.tag }}
+      mode: application
+    secrets:
+      coolify_token: ${{ secrets.COOLIFY_TOKEN }}
