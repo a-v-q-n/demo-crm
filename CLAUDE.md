@@ -2,7 +2,7 @@
 
 Une démonstration publique : pipeline, fiches clients, timelines, rédaction assistée. Elle sert à
 montrer, pas à porter des données réelles. `demo-crm` suit le cycle de dev continu AVQN — la
-méthodologie (skills `/dev`, `/apercu`) vit dans l'atelier, la mécanique de déploiement (reusable
+méthode (plugin `avqn-dev` : `/avqn-dev:dev`, `/avqn-dev:apercu`) arrive avec le repo, la mécanique de déploiement (reusable
 workflows) dans `a-v-q-n/ci`. Ce repo ne porte que **son contrat**, son build et son code.
 
 ## Contrat

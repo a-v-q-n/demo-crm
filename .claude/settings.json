@@ -5,11 +5,20 @@
   },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
-      "source": { "source": "github", "repo": "anthropics/claude-plugins-official" }
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "avqn": {
+      "source": {
+        "source": "github",
+        "repo": "a-v-q-n/skills"
+      }
     }
   },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
+    "avqn-dev@avqn": true
   },
   "hooks": {
     "SessionStart": [
@@ -17,7 +26,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh",
+            "timeout": 180
           }
         ]
       }
